@@ -1,3 +1,4 @@
+import re
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
@@ -9,6 +10,7 @@ import time
 from urllib.parse import urljoin
 
 glassdoor_base_url = "https://www.glassdoor.co.in"
+relevant_positions = ['senior software engineer', 'senior development engineer', 'senior software developer']
 
 service = Service('geckodriver/geckodriver')
 firefox_options = Options()
@@ -60,7 +62,55 @@ for job_link in job_links_all:
     if not company_link.startswith(glassdoor_base_url):
         company_link = urljoin(glassdoor_base_url, company_link)
     
-    company_links_all.append(company_element.get_attribute("href"))
+    #company_links_all.append(company_element.get_attribute("href"))
+    driver.get(company_link)
+    time.sleep(20)
+
+    # get the salary div
+    salary_div = driver.find_element(By.XPATH, "//div[@id='salaries' and @data-test='ei-nav-salaries-link']")
+    salary_div.click()
+    time.sleep(30)
+
+    # get the current url and update it
+    salary_url = driver.current_url
+
+    index_of_htm = salary_url.find(".htm")
+    if index_of_htm == -1:
+        print("could not update url:: ", salary_url)
+        continue
+    
+    page_num = 1
+    while True:
+        salary_url_new = salary_url[:index_of_htm] + "_IP" + str(page_num) + salary_url[index_of_htm:]
+        page_num = page_num + 1
+        driver.get(salary_url_new)
+        time.sleep(20)
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+        table_element = driver.find_element(By.XPATH, "//table[contains(@class, 'salarylist_salary-table')]")
+        tbody_element = table_element.find_element(By.XPATH, "//tbody")
+        row_count = len(tbody_element.find_elements(By.TAG_NAME, "tr"))
+
+        if row_count <= 1:
+            break
+        
+        rows = tbody_element.find_elements(By.TAG_NAME, "tr")[1:]
+        for row in rows:
+            job_details = row.text.split("\n")
+            job_title = job_details[0]
+            max_salary = re.search(r'\d+', job_details[2].split("-")[1]).group()
+            print("here is the job title")
+            print(job_title)
+            print("here is the max salary")
+            print(max_salary)
+            # job_title_td = row.find_element(By.XPATH, "//td[@data-testid='jobTitle']")
+            # print("here is the whole job_title_td")
+            # print(job_title_td)
+            # job_title = job_title_td.find_element(By.XPATH, "//a[contains(@class, 'salarylist_job-title-link')]").text
+            # print("found the job title: ", job_title)
+            
+        exit(0)
+    
 
 time.sleep(180)
 driver.quit()
