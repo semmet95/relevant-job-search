@@ -11,6 +11,7 @@ from urllib.parse import urljoin
 
 glassdoor_base_url = "https://www.glassdoor.co.in"
 relevant_positions = ['senior software engineer', 'senior development engineer', 'senior software developer']
+expected_min_salary = 40
 
 service = Service('geckodriver/geckodriver')
 firefox_options = Options()
@@ -95,21 +96,25 @@ for job_link in job_links_all:
             break
         
         rows = tbody_element.find_elements(By.TAG_NAME, "tr")[1:]
+        role_found = False
         for row in rows:
             job_details = row.text.split("\n")
             job_title = job_details[0]
-            max_salary = re.search(r'\d+', job_details[2].split("-")[1]).group()
-            print("here is the job title")
-            print(job_title)
-            print("here is the max salary")
-            print(max_salary)
-            # job_title_td = row.find_element(By.XPATH, "//td[@data-testid='jobTitle']")
-            # print("here is the whole job_title_td")
-            # print(job_title_td)
-            # job_title = job_title_td.find_element(By.XPATH, "//a[contains(@class, 'salarylist_job-title-link')]").text
-            # print("found the job title: ", job_title)
-            
-        exit(0)
+
+            if job_title.lower() in relevant_positions:
+                role_found = True
+                max_salary = int(re.search(r'\d+', job_details[2].split("-")[1]).group())
+
+                if max_salary >= expected_min_salary:
+                    print("max salary: ", max_salary, " for role: ", job_title, " in comapny:")
+                    print(driver.current_url)
+                
+                break
+
+        if role_found:
+            break
+        
+        time.sleep(20)
     
 
 time.sleep(180)
