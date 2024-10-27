@@ -11,8 +11,8 @@ from urllib.parse import urljoin
 
 glassdoor_base_url = "https://www.glassdoor.co.in"
 job_search_urls = [
-    "https://www.glassdoor.co.in/Job/pune-india-jobs-SRCH_IL.0,10_IC2856202.htm?minRating=4.0&fromAge=3&jobTypeIndeed=CF3CP&cityId=2856202",
-    "https://www.glassdoor.co.in/Job/hyderabad-india-jobs-SRCH_IL.0,15_IC2865319.htm?jobTypeIndeed=CF3CP&minRating=4.0&fromAge=3&cityId=2865319"
+    "https://www.glassdoor.co.in/Job/pune-india-senior-software-engineer-jobs-SRCH_IL.0,10_IC2856202_KO11,35.htm?minRating=4.0&fromAge=7",
+    "https://www.glassdoor.co.in/Job/hyderabad-india-senior-software-engineer-jobs-SRCH_IL.0,15_IC2865319_KO16,40.htm?minRating=4.0&fromAge=7"
 ]
 relevant_positions = ['senior software engineer', 'senior development engineer', 'senior software developer']
 expected_min_salary = 40
@@ -56,16 +56,15 @@ for search_url in job_search_urls:
 
     for job in job_arr:
         try:
-            a_element_css = job.find_element(By.CSS_SELECTOR, 'a[data-test="job-title"]')
-            job_links_all.append(a_element_css.get_attribute("href"))
+            job_listing_element = job.find_element(By.CSS_SELECTOR, 'a[data-test="job-title"]')
+            job_links_all.append(job_listing_element.get_attribute("href"))
         except NoSuchElementException:
             continue 
 
     # iterate over individual job links
-    company_links_all = []
     for job_link in job_links_all:
         driver.get(job_link)
-        time.sleep(10)
+        time.sleep(15)
         company_element = driver.find_element(By.XPATH, "//a[contains(@class, 'EmployerProfile_profileContainer')]")
         company_link = company_element.get_attribute("href")
         
@@ -78,12 +77,12 @@ for search_url in job_search_urls:
         checked_companies.add(company_link)
 
         driver.get(company_link)
-        time.sleep(20)
+        time.sleep(15)
 
         # get the salary div
         salary_div = driver.find_element(By.XPATH, "//div[@id='salaries' and @data-test='ei-nav-salaries-link']")
         salary_div.click()
-        time.sleep(30)
+        time.sleep(15)
 
         # get the current url and update it
         salary_url = driver.current_url
@@ -97,10 +96,8 @@ for search_url in job_search_urls:
         while True:
             salary_url_new = salary_url[:index_of_htm] + "_IP" + str(page_num) + salary_url[index_of_htm:]
             page_num = page_num + 1
-            driver.refresh()
-            time.sleep(10)
             driver.get(salary_url_new)
-            time.sleep(20)
+            time.sleep(25)
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
             table_element = None
@@ -124,22 +121,16 @@ for search_url in job_search_urls:
 
                 if job_title.lower() in relevant_positions:
                     role_found = True
+
                     max_salary = int(re.search(r'\d+', job_details[2].split("-")[1]).group())
 
                     if max_salary >= expected_min_salary:
                         print("max salary: ", max_salary, " for role: ", job_title, " in comapny:")
                         print(driver.current_url)
-                        with open("artifacts/company-list.txt", "w") as file:
-                            for company in checked_companies:
-                                file.write(f"{company}\n")
                     
                     break
 
             if role_found:
                 break
-            
-            time.sleep(20)
-    
-
 
 driver.quit()
